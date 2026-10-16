@@ -24,7 +24,7 @@ The plugin JAR is written to `target/entity-ai-range-1.0.0.jar`. Copy it to the 
 - It disables AI only for mobs whose AI was enabled. Entities already saved without AI are left alone, so villagers already handled by the Stillagers datapack are not claimed by this plugin.
 - A small persistent marker records which mobs this plugin changed. If a marked mob loads within range after restart, its AI is restored. On plugin shutdown, marked mobs in loaded chunks are restored.
 - `/entityairange status` reports the number of managed mobs in loaded chunks.
-- `/entityairange restore` restores managed mobs in loaded chunks. Mobs in unloaded chunks are restored when the plugin is running and those chunks load near a player.
+- `/entityairange restore` restores managed mobs in loaded chunks and pauses new AI changes. Marked mobs in unloaded chunks are restored as their chunks load.
 - `/entityairange` opens the in-game settings menu. The redstone and emerald buttons change the distance in 16- or 64-block steps; the clock resets it to 128 blocks. Changes save immediately. Only players with `entityairange.admin` (operators by default) can open and use the menu.
 - The menu constrains the distance to 16–1024 blocks.
 - `/entityairange restore` pauses automatic management until the next server restart; `/entityairange resume` starts it again.
