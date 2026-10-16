@@ -6,8 +6,8 @@ description: Disables mob AI far from players and restores it when they return.
 author: ServerTools
 commands:
   entityairange:
-    description: Shows status or restores entities managed by EntityAiRange.
-    usage: /entityairange <status|restore>
+    description: Opens the settings GUI or manages entities tracked by EntityAiRange.
+    usage: /entityairange [gui|status|restore|resume]
     permission: entityairange.admin
     aliases: [eair]
 permissions:
