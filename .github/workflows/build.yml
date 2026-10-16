@@ -3,6 +3,11 @@ name: Build plugin
 on:
   push:
   pull_request:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -22,3 +27,8 @@ jobs:
         with:
           name: EntityAiRange-v0.1
           path: target/entity-ai-range-0.1.jar
+      - name: Attach JAR to published release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" target/entity-ai-range-0.1.jar --clobber
