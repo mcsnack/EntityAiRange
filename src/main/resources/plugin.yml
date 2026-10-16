@@ -1,5 +1,5 @@
 name: EntityAiRange
-version: 1.0.0
+version: 0.1
 main: de.servertools.entityairange.EntityAiRangePlugin
 api-version: '26.3'
 description: Disables mob AI far from players and restores it when they return.
