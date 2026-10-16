@@ -1,0 +1,8 @@
+# Mobs farther than this distance from every online player have their AI disabled.
+disable-distance: 128
+
+# How often loaded mobs are checked. 100 ticks = 5 seconds.
+scan-interval-ticks: 100
+
+# Print a summary to the console after each scan.
+log-scan-summary: false
