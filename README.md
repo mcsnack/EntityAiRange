@@ -10,7 +10,7 @@ Paper-Plugin für Minecraft 26.3. Das Plugin deaktiviert die KI geladener Mobs, 
 
 ## Installation
 
-1. Lade **EntityAiRange-v0.1.jar** aus dem [Release v0.1](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.1) herunter.
+1. Lade **entity-ai-range-0.1.jar** aus dem [Release v0.1](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.1) herunter.
 2. Lege die JAR-Datei in den Ordner **plugins** deines Paper-Servers.
 3. Starte den Server neu.
 4. Öffne im Spiel das Menü mit **/entityairange gui**.
