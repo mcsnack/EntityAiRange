@@ -20,5 +20,5 @@ jobs:
       - name: Upload plugin JAR
         uses: actions/upload-artifact@v4
         with:
-          name: EntityAiRange
-          path: target/entity-ai-range-1.0.0.jar
+          name: EntityAiRange-v0.1
+          path: target/entity-ai-range-0.1.jar
