@@ -1,0 +1,16 @@
+name: EntityAiRange
+version: 1.0.0
+main: de.servertools.entityairange.EntityAiRangePlugin
+api-version: '26.3'
+description: Disables mob AI far from players and restores it when they return.
+author: ServerTools
+commands:
+  entityairange:
+    description: Shows status or restores entities managed by EntityAiRange.
+    usage: /entityairange <status|restore>
+    permission: entityairange.admin
+    aliases: [eair]
+permissions:
+  entityairange.admin:
+    description: Allows use of EntityAiRange commands.
+    default: op
