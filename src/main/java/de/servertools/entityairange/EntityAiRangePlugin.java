@@ -11,6 +11,7 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
@@ -221,6 +222,20 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
     public void onSettingsDrag(InventoryDragEvent event) {
         if (event.getView().getTopInventory().getHolder() instanceof SettingsHolder) {
             event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent event) {
+        if (scanningEnabled) {
+            return;
+        }
+        for (Entity entity : event.getChunk().getEntities()) {
+            if (entity instanceof Mob mob
+                    && mob.getPersistentDataContainer().has(managedKey, PersistentDataType.BYTE)) {
+                mob.setAI(true);
+                mob.getPersistentDataContainer().remove(managedKey);
+            }
         }
     }
 
