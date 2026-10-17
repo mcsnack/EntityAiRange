@@ -10,7 +10,7 @@ Paper-Plugin für Minecraft 26.3. EntityAiRange deaktiviert die KI geladener Mob
 
 ## Installation
 
-1. Lade **entity-ai-range-0.3.2.jar** aus dem [Release v0.3.2](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.3.2) herunter.
+1. Lade **entity-ai-range-0.3.3.jar** aus dem [Release v0.3.3](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.3.3) herunter.
 2. Lege die JAR in den Ordner `plugins` deines Paper-Servers.
 3. Starte den Server neu.
 4. Öffne das Menü mit `/entityairange gui`.
@@ -81,4 +81,4 @@ Mit Maven und Java 25:
 mvn --batch-mode package
 ```
 
-Die JAR liegt unter `target/entity-ai-range-0.3.2.jar`.
+Die JAR liegt unter `target/entity-ai-range-0.3.3.jar`.
