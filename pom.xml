@@ -5,7 +5,7 @@
 
     <groupId>de.servertools</groupId>
     <artifactId>entity-ai-range</artifactId>
-    <version>0.3.4</version>
+    <version>0.3.3</version>
     <name>EntityAiRange</name>
     <description>Disables mob AI outside a configurable player radius and restores it nearby.</description>
 
