@@ -10,7 +10,7 @@ Paper-Plugin für Minecraft 26.3. EntityAiRange deaktiviert die KI geladener Mob
 
 ## Installation
 
-1. Lade **entity-ai-range-0.3.jar** aus dem [Release v0.3](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.3) herunter.
+1. Lade **entity-ai-range-0.3.1.jar** aus dem [Release v0.3.1](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.3.1) herunter.
 2. Lege die JAR in den Ordner `plugins` deines Paper-Servers.
 3. Starte den Server neu.
 4. Öffne das Menü mit `/entityairange gui`.
@@ -25,6 +25,8 @@ Paper-Plugin für Minecraft 26.3. EntityAiRange deaktiviert die KI geladener Mob
 | `/entityairange resume` | Setzt die automatische Mob-KI-Verwaltung fort. |
 | `/entity despawn add <minecraft:typ> [Sekunden]` | Fügt eine Regel für einen Item- oder Entity-Typ hinzu. Ohne Zeit gilt die im GUI eingestellte Item-Standardzeit. |
 | `/entity despawn remove <minecraft:typ>` | Entfernt die Regel für den angegebenen Typ. |
+
+Die Befehle unterstützen TAB-Vervollständigung: TAB zeigt Unterbefehle, passende Item- und Entity-IDs, vorhandene Regeln bei `remove` sowie Zeitwerte. Auch `/entityairange` vervollständigt `gui`, `status`, `restore` und `resume`.
 
 Beispiele:
 
@@ -79,4 +81,4 @@ Mit Maven und Java 25:
 mvn --batch-mode package
 ```
 
-Die JAR liegt unter `target/entity-ai-range-0.3.jar`.
+Die JAR liegt unter `target/entity-ai-range-0.3.1.jar`.
