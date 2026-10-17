@@ -1,13 +1,13 @@
 name: EntityAiRange
-version: 0.2
+version: 0.3
 main: de.servertools.entityairange.EntityAiRangePlugin
 api-version: '26.3'
-description: Disables mob AI far from players and manages entity despawn timers.
+description: Disables mob AI far from players and manages per-type despawn timers.
 author: ServerTools
 commands:
   entity:
-    description: Sets a despawn timer for selected entities.
-    usage: /entity despawn add <selector> [seconds]
+    description: Adds or removes a despawn timer for Minecraft item or entity types.
+    usage: /entity despawn <add|remove> <minecraft:typ> [Sekunden]
     permission: entityairange.admin
   entityairange:
     description: Opens the settings GUI or manages entities tracked by EntityAiRange.
