@@ -7,6 +7,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
@@ -34,8 +35,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.Locale;
+import java.util.TreeSet;
 
-public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
+public final class EntityAiRangePlugin extends JavaPlugin implements Listener, TabCompleter {
     private NamespacedKey managedKey;
     private NamespacedKey despawnRuleKey;
     private NamespacedKey despawnRuleIdKey;
@@ -58,6 +60,8 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
         legacyManualDespawnKey = new NamespacedKey(this, "manual_despawn_at_ticks");
         loadSettings();
         getServer().getPluginManager().registerEvents(this, this);
+        if (getCommand("entity") != null) getCommand("entity").setTabCompleter(this);
+        if (getCommand("entityairange") != null) getCommand("entityairange").setTabCompleter(this);
 
         for (World world : Bukkit.getWorlds()) {
             for (Entity entity : world.getEntities()) {
@@ -205,6 +209,48 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
 
         sender.sendMessage("Usage: /" + label + " [gui|status|restore|resume]");
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (!sender.hasPermission("entityairange.admin")) return List.of();
+        if (command.getName().equalsIgnoreCase("entityairange")) {
+            if (args.length == 1) {
+                return partialMatches(List.of("gui", "status", "restore", "resume"), args[0]);
+            }
+            return List.of();
+        }
+        if (!command.getName().equalsIgnoreCase("entity")) return List.of();
+        if (args.length == 1) return partialMatches(List.of("despawn"), args[0]);
+        if (args.length == 2 && args[0].equalsIgnoreCase("despawn")) {
+            return partialMatches(List.of("add", "remove"), args[1]);
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("despawn")) {
+            if (args[1].equalsIgnoreCase("add")) {
+                TreeSet<String> keys = new TreeSet<>();
+                for (EntityType type : EntityType.values()) keys.add(type.getKey().toString());
+                for (Material material : Material.values()) keys.add(material.getKey().toString());
+                return partialMatches(new ArrayList<>(keys), args[2]);
+            }
+            if (args[1].equalsIgnoreCase("remove")) {
+                var rules = getConfig().getConfigurationSection("despawn-rules");
+                List<String> keys = rules == null ? List.of() : new ArrayList<>(rules.getKeys(false));
+                return partialMatches(keys, args[2]);
+            }
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("despawn")
+                && args[1].equalsIgnoreCase("add")) {
+            return partialMatches(List.of("15", "30", "60", "120", "300"), args[3]);
+        }
+        return List.of();
+    }
+
+    private List<String> partialMatches(List<String> candidates, String input) {
+        String prefix = input.toLowerCase(Locale.ROOT);
+        return candidates.stream()
+                .filter(candidate -> candidate.toLowerCase(Locale.ROOT).startsWith(prefix))
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 
     private void openSettings(Player player) {
