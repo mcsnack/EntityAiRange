@@ -1,93 +1,66 @@
 # EntityAiRange
 
-Paper-Plugin für Minecraft 26.3. Das Plugin deaktiviert die KI geladener Mobs, wenn sich kein Spieler in der eingestellten Reichweite befindet. Kommt ein Spieler zurück, wird die zuvor vom Plugin deaktivierte KI wieder eingeschaltet.
+Paper-Plugin für Minecraft 26.3. EntityAiRange deaktiviert die KI geladener Mobs außerhalb einer einstellbaren Spielerreichweite und stellt sie wieder her, wenn Spieler zurückkehren. Zusätzlich lässt sich die Lebenszeit gedroppter Items verkürzen. Für einzelne Entities kann ein eigener Despawn-Timer gesetzt werden.
 
 ## Voraussetzungen
 
 - Paper **26.3**
 - **Java 25**
-- Ingame-Rechte: **entityairange.admin** (standardmäßig für Operatoren)
+- Berechtigung **entityairange.admin** (standardmäßig Operatoren)
 
 ## Installation
 
-1. Lade **entity-ai-range-0.1.jar** aus dem [Release v0.1](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.1) herunter.
-2. Lege die JAR-Datei in den Ordner **plugins** deines Paper-Servers.
+1. Lade **entity-ai-range-0.2.jar** aus dem [Release v0.2](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.2) herunter.
+2. Lege die JAR in den Ordner `plugins` deines Paper-Servers.
 3. Starte den Server neu.
-4. Öffne im Spiel das Menü mit **/entityairange gui**.
+4. Öffne das Menü mit `/entityairange gui`.
 
-Beim ersten Start erstellt das Plugin **plugins/EntityAiRange/config.yml**. Änderungen an dieser Datei werden nach einem Serverneustart geladen.
-
-## GUI und Befehle
-
-Die Einstellungen können nur von Spielern mit der Berechtigung **entityairange.admin** geändert werden. Operatoren haben diese standardmäßig.
+## Befehle
 
 | Befehl | Funktion |
 | --- | --- |
-| **/entityairange** | Öffnet das Einstellungsmenü. |
-| **/entityairange gui** | Öffnet ebenfalls das Einstellungsmenü. |
-| **/eair** oder **/eair gui** | Kurzform für das Menü. |
-| **/entityairange status** | Zeigt, wie viele geladene Mobs das Plugin aktuell verwaltet. |
-| **/entityairange restore** | Stellt die KI verwalteter, geladener Mobs wieder her und pausiert die automatische Verwaltung. |
-| **/entityairange resume** | Setzt die automatische Verwaltung fort. |
+| `/entityairange gui` | Öffnet das Einstellungsmenü für Reichweite und Item-Despawnzeit. |
+| `/entityairange status` | Zeigt die Zahl der aktuell verwalteten Mobs. |
+| `/entityairange restore` | Stellt verwaltete Mob-KI wieder her und pausiert die automatische Verwaltung. |
+| `/entityairange resume` | Setzt die automatische Mob-KI-Verwaltung fort. |
+| `/entity despawn add <Selektor> [Sekunden]` | Setzt für die ausgewählten Entities einen einmaligen Timer. Ohne Sekundenwert wird die GUI-Einstellung verwendet. |
 
-Die GUI zeigt die aktuelle Reichweite in der Mitte. Klicke auf die jeweiligen Gegenstände:
-
-| Gegenstand | Aktion |
-| --- | --- |
-| Redstone links | Reichweite um 64 Blöcke verringern |
-| Redstone daneben | Reichweite um 16 Blöcke verringern |
-| Kompass in der Mitte | Zeigt die aktuelle Reichweite |
-| Smaragd daneben | Reichweite um 16 Blöcke erhöhen |
-| Smaragd rechts | Reichweite um 64 Blöcke erhöhen |
-| Uhr unten | Auf 128 Blöcke zurücksetzen |
-| Barriere unten rechts | Menü schließen |
-
-Die Reichweite ist auf **16 bis 1024 Blöcke** begrenzt. Jede Änderung wird sofort in der Konfiguration gespeichert und gilt für die laufenden Scans.
-
-Wenn du einem Nicht-Operator die GUI erlauben möchtest, kannst du die Berechtigung beispielsweise mit LuckPerms vergeben:
+Beispiele:
 
 ```text
-/lp user <Spieler> permission set entityairange.admin true
+/entity despawn add @e[type=item,limit=1,sort=nearest] 60
+/entity despawn add @e[type=zombie,distance=..8] 30
+/entity despawn add @e[type=item,distance=..5]
 ```
+
+Selektoren entsprechen den Vanilla-Selektoren. Der optionale Zeitwert ist auf **15 bis 300 Sekunden** begrenzt. Die Auswahl wird beim Befehl ausgewertet; der Timer wird nur für die Entities gesetzt, die der Selektor in diesem Moment findet. Ein Selektor mit `limit=1` zielt auf ein einzelnes Entity.
+
+## GUI
+
+Im Reichweitenmenü wählst du **Item-Despawn einstellen**, um die zweite Seite zu öffnen. Dort passen die Tasten die Zeit in Schritten von 15 oder 60 Sekunden an. Die erlaubte Spanne ist 15 Sekunden bis 5 Minuten; Änderungen werden sofort gespeichert. Das gilt für alle gedroppten Items, auch für bereits geladene Items. Fünf Minuten entspricht dem normalen Vanilla-Despawnwert.
+
+Die Despawnzeit zählt in Minecraft-Ticks. Sie pausiert, solange der Chunk eines Entities nicht geladen ist. Beim Laden wird der Timer anhand des gespeicherten Entity-Alters fortgesetzt. Der Timer für per Befehl ausgewählte Entities bleibt ebenfalls über Chunk-Entladen und Serverneustarts erhalten.
 
 ## Konfiguration
 
-Datei: **plugins/EntityAiRange/config.yml**
+Datei: `plugins/EntityAiRange/config.yml`
 
 ```yaml
-# AI wird deaktiviert, wenn kein Spieler innerhalb dieser Distanz ist.
 disable-distance: 128
-
-# Abstand zwischen Prüfungen: 100 Ticks entsprechen 5 Sekunden.
 scan-interval-ticks: 100
-
-# Schreibt nach jedem Scan eine Zusammenfassung ins Serverlog.
 log-scan-summary: false
+item-despawn-seconds: 300
 ```
 
-Die GUI aktualisiert **disable-distance** direkt. Änderungen an **scan-interval-ticks** oder **log-scan-summary** benötigen einen Neustart.
+`item-despawn-seconds` wird auf 15 bis 300 Sekunden begrenzt. Die GUI speichert diesen Wert sofort. Reichweite, Scan-Intervall und Log-Zusammenfassung funktionieren wie in den vorherigen Versionen.
 
-## Verhalten und Hinweise
+## Hinweise
 
-- Standardmäßig prüft das Plugin alle 5 Sekunden die geladenen Mobs in allen Welten. Ein Mob bleibt aktiv, solange mindestens ein Spieler in derselben Welt innerhalb der Reichweite ist.
-- Es deaktiviert nur die KI von Mobs, deren KI vorher aktiv war. Entities, die bereits mit deaktivierter KI geladen werden, bleiben unberührt. Damit übernimmt das Plugin beispielsweise keine von Stillagers veränderten Villager.
-- Das Plugin markiert Mobs, deren KI es selbst deaktiviert hat. Kommt ein solcher Mob wieder in Reichweite, stellt es dessen KI wieder her.
-- **/entityairange restore** stellt markierte Mobs in geladenen Chunks wieder her. Während der Pause werden markierte Mobs auch beim Laden ihrer Chunks wiederhergestellt. Die Pause endet mit einem Neustart oder **/entityairange resume**.
-- Beim Herunterfahren wird die KI verwalteter Mobs in geladenen Chunks wiederhergestellt.
-- Deaktivierte Mob-KI bedeutet auch keine normale Bewegung, Wegfindung oder Zielsuche. Mob-Farmen, Raids, Haustiere und andere Mechaniken können sich daher anders verhalten.
-- Das Plugin durchsucht geladene Mobs. Auf großen Servern solltest du nach der Installation die MSPT beobachten. Bei messbarer Zusatzlast kann ein längeres **scan-interval-ticks** helfen.
+- Nur Mobs, deren KI vorher aktiv war, werden verwaltet. Entities, die bereits mit deaktivierter KI geladen werden, bleiben unberührt. So übernimmt das Plugin keine von Stillagers veränderten Villager.
+- Deaktivierte Mob-KI bedeutet auch keine normale Bewegung, Wegfindung oder Zielsuche. Mob-Farmen, Raids, Haustiere und andere Mechaniken können sich anders verhalten.
+- Despawn-Timer entfernen die ausgewählten Entities endgültig. Wähle Selektoren daher sorgfältig.
 
-Vor dem produktiven Einsatz empfiehlt sich ein Backup oder ein Test auf einer Kopie des Servers.
-
-### Plugin dauerhaft entfernen
-
-Führe zuerst **/entityairange restore** aus und lade anschließend die Chunks mit zuvor verwalteten Mobs, damit deren KI wiederhergestellt wird. Solange ein Chunk nicht geladen wurde, bleibt dort die Markierung gespeichert. Entfernst du das Plugin, bevor diese Chunks geladen wurden, kann das Plugin die KI dieser Mobs später nicht mehr wiederherstellen.
-
-### Stillagers
-
-Stillagers-Villager, die bereits mit deaktivierter KI geladen werden, werden nicht vom Plugin übernommen. Die Trading- und Restock-Funktionen bleiben damit Sache von Stillagers.
-
-## Build aus dem Quellcode
+## Build
 
 Mit Maven und Java 25:
 
@@ -95,4 +68,4 @@ Mit Maven und Java 25:
 mvn --batch-mode package
 ```
 
-Die gebaute JAR liegt unter **target/entity-ai-range-0.1.jar**. GitHub Actions baut das Projekt bei Pushes und Pull Requests und stellt die JAR als Workflow-Artefakt bereit.
+Die JAR liegt unter `target/entity-ai-range-0.2.jar`.
