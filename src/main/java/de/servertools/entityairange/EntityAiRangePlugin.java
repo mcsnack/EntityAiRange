@@ -228,8 +228,14 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
         if (args.length == 3 && args[0].equalsIgnoreCase("despawn")) {
             if (args[1].equalsIgnoreCase("add")) {
                 TreeSet<String> keys = new TreeSet<>();
-                for (EntityType type : EntityType.values()) keys.add(type.getKey().toString());
-                for (Material material : Material.values()) keys.add(material.getKey().toString());
+                for (EntityType type : EntityType.values()) {
+                    NamespacedKey key = type.getKey();
+                    if (key != null) keys.add(key.toString());
+                }
+                for (Material material : Material.values()) {
+                    NamespacedKey key = material.getKey();
+                    if (key != null) keys.add(key.toString());
+                }
                 return partialMatches(new ArrayList<>(keys), args[2]);
             }
             if (args[1].equalsIgnoreCase("remove")) {
@@ -455,8 +461,12 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
     }
 
     private boolean isKnownRuleKey(NamespacedKey key) {
-        for (EntityType type : EntityType.values()) if (type.getKey().equals(key)) return true;
-        for (Material material : Material.values()) if (material.getKey().equals(key)) return true;
+        for (EntityType type : EntityType.values()) {
+            if (key.equals(type.getKey())) return true;
+        }
+        for (Material material : Material.values()) {
+            if (key.equals(material.getKey())) return true;
+        }
         return false;
     }
 
