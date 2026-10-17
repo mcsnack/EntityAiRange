@@ -6,3 +6,6 @@ scan-interval-ticks: 100
 
 # Print a summary to the console after each scan.
 log-scan-summary: false
+
+# Lifetime for dropped items in seconds (15 to 300).
+item-despawn-seconds: 300
