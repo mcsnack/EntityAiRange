@@ -46,9 +46,9 @@ Beim Entfernen einer Regel gilt für Items wieder die spezifischere verbleibende
 `/entityairange gui` öffnet die Kategorien:
 
 - **Mob AI**: Reichweite wie bisher anpassen.
-- **Item Despawn**: globale Lebenszeit aller gedroppten Items von 15 Sekunden bis 5 Minuten ändern und aktive Typ-Regeln einsehen.
+- **Item-Despawn Regeln**: zeigt ausschließlich die aufgenommenen Item- und Entity-Typen samt eingestellter Despawn-Zeit. Bei mehr als 18 Regeln gibt es mehrere Seiten.
 
-Typ-Regeln fügst du über die Befehle oben hinzu und entfernst sie per `remove`. Im Item-Despawn-Menü werden die aktiven Regeln samt Zeit angezeigt. Änderungen der globalen Item-Zeit wirken auf geladene und neu erscheinende Items, sofern keine passendere Typ-Regel gesetzt ist.
+Typ-Regeln fügst du über die Befehle oben hinzu und entfernst sie per `remove`. Das GUI dient hier nur als Übersicht; die globale Standardzeit wird in `config.yml` über `item-despawn-seconds` festgelegt. Sie wirkt auf gedroppte Items, sofern keine passendere Typ-Regel gesetzt ist.
 
 Despawn-Zeiten zählen in Minecraft-Ticks und pausieren, solange der Chunk nicht geladen ist. Die Timer für Typ-Regeln bleiben über Chunk-Entladen und Serverneustarts erhalten.
 
@@ -65,7 +65,7 @@ despawn-rules: {}
 despawn-rule-ids: {}
 ```
 
-Typ-Regeln werden automatisch in der Konfiguration gespeichert. Die GUI speichert `item-despawn-seconds` sofort. Reichweite, Scan-Intervall und Log-Zusammenfassung funktionieren wie in den vorherigen Versionen.
+Typ-Regeln werden automatisch in der Konfiguration gespeichert. Die globale Standardzeit kann über `item-despawn-seconds` angepasst werden. Reichweite, Scan-Intervall und Log-Zusammenfassung funktionieren wie in den vorherigen Versionen.
 
 ## Hinweise
 
