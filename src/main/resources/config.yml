@@ -7,5 +7,9 @@ scan-interval-ticks: 100
 # Print a summary to the console after each scan.
 log-scan-summary: false
 
-# Lifetime for dropped items in seconds (15 to 300).
+# Default lifetime for dropped items in seconds (15 to 300).
 item-despawn-seconds: 300
+
+# Custom type rules are managed with /entity despawn add|remove.
+despawn-rules: {}
+despawn-rule-ids: {}
