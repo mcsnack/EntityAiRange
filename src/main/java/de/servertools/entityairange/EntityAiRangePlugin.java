@@ -378,7 +378,10 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
 
     @EventHandler
     public void onEntitySpawn(EntitySpawnEvent event) {
-        scheduleDespawn(event.getEntity());
+        Entity entity = event.getEntity();
+        // EntitySpawnEvent can fire before the entity has been added to the world.
+        // Defer one tick so scheduleDespawn's validity check does not skip new drops.
+        getServer().getScheduler().runTask(this, () -> scheduleDespawn(entity));
     }
 
     @EventHandler
@@ -634,3 +637,4 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
         return count;
     }
 }
+
