@@ -3,6 +3,8 @@ package de.servertools.entityairange;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.Material;
+import org.bukkit.entity.EntityType;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
@@ -10,7 +12,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Item;
-import org.bukkit.event.entity.ItemSpawnEvent;
+import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkLoadEvent;
@@ -31,10 +33,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Locale;
 
 public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
     private NamespacedKey managedKey;
-    private NamespacedKey manualDespawnKey;
+    private NamespacedKey despawnRuleKey;
+    private NamespacedKey despawnRuleIdKey;
+    private NamespacedKey despawnRuleStartAgeKey;
+    private NamespacedKey legacyManualDespawnKey;
     private final Map<UUID, BukkitTask> despawnTasks = new HashMap<>();
     private double disableDistanceSquared;
     private long scanIntervalTicks;
@@ -46,7 +52,10 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
     public void onEnable() {
         saveDefaultConfig();
         managedKey = new NamespacedKey(this, "disabled_by_entity_ai_range");
-        manualDespawnKey = new NamespacedKey(this, "manual_despawn_at_ticks");
+        despawnRuleKey = new NamespacedKey(this, "despawn_rule_key");
+        despawnRuleIdKey = new NamespacedKey(this, "despawn_rule_id");
+        despawnRuleStartAgeKey = new NamespacedKey(this, "despawn_rule_start_age");
+        legacyManualDespawnKey = new NamespacedKey(this, "manual_despawn_at_ticks");
         loadSettings();
         getServer().getPluginManager().registerEvents(this, this);
 
@@ -200,6 +209,19 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
 
     private void openSettings(Player player) {
         SettingsHolder holder = new SettingsHolder();
+        Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("EntityAiRange"));
+        holder.inventory = inventory;
+        holder.page = SettingsPage.HOME;
+        inventory.setItem(11, item(org.bukkit.Material.VILLAGER_SPAWN_EGG, "Mob AI",
+                "Einstellungen für die Mob-AI-Reichweite"));
+        inventory.setItem(15, item(org.bukkit.Material.CLOCK, "Item Despawn",
+                "Standardzeit und Regeln für Item- und Entity-Typen"));
+        inventory.setItem(26, item(MaterialChoice.CLOSE, "Schließen"));
+        player.openInventory(inventory);
+    }
+
+    private void openAiSettings(Player player) {
+        SettingsHolder holder = new SettingsHolder();
         Inventory inventory = Bukkit.createInventory(holder, 27,
                 Component.text("Entity-AI Reichweite"));
         holder.inventory = inventory;
@@ -214,27 +236,48 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
         inventory.setItem(15, item(MaterialChoice.INCREASE, "+ 16 Blöcke", "Kleiner Schritt"));
         inventory.setItem(16, item(MaterialChoice.INCREASE, "+ 64 Blöcke", "Großer Schritt"));
         inventory.setItem(22, item(MaterialChoice.RESET, "Standardeinstellung: 128", "Setzt die Reichweite auf 128 Blöcke."));
-        inventory.setItem(4, item(org.bukkit.Material.CLOCK, "Item-Despawn einstellen",
-                "Aktuelle Zeit: " + itemDespawnSeconds + " Sekunden"));
+        inventory.setItem(18, item(org.bukkit.Material.ARROW, "Zurück zu den Kategorien"));
         inventory.setItem(26, item(MaterialChoice.CLOSE, "Schließen"));
         player.openInventory(inventory);
     }
 
-    private void openDespawnSettings(Player player) {
+    private void openDespawnSettings(Player player, int page) {
         SettingsHolder holder = new SettingsHolder();
         Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Item-Despawnzeit"));
         holder.inventory = inventory;
         holder.page = SettingsPage.DESPAWN;
+        holder.rulePage = page;
+        var section = getConfig().getConfigurationSection("despawn-rules");
+        List<String> rules = new ArrayList<>(section == null ? List.of() : section.getKeys(false));
+        rules.sort(String::compareTo);
+        int pageCount = Math.max(1, (rules.size() + 8) / 9);
+        holder.rulePage = Math.max(0, Math.min(holder.rulePage, pageCount - 1));
+        int from = holder.rulePage * 9;
+        for (int i = from; i < Math.min(from + 9, rules.size()); i++) {
+            String key = rules.get(i);
+            int seconds = getConfig().getInt("despawn-rules." + key, 0);
+            inventory.setItem(i - from, item(org.bukkit.Material.PAPER, key,
+                    "Despawn nach " + formatDuration(seconds),
+                    "Entfernen: /entity despawn remove " + key));
+        }
         inventory.setItem(10, item(org.bukkit.Material.REDSTONE, "− 60 Sekunden"));
         inventory.setItem(11, item(org.bukkit.Material.REDSTONE, "− 15 Sekunden"));
         inventory.setItem(13, item(org.bukkit.Material.CLOCK,
                 "Item-Despawn: " + formatDuration(itemDespawnSeconds),
                 "Gilt für gedroppte Items.", "Bereich: 15 Sekunden bis 5 Minuten.",
+                "Standard für gedroppte Items ohne Material-Regel.",
                 "Änderungen werden sofort gespeichert."));
         inventory.setItem(15, item(org.bukkit.Material.EMERALD, "+ 15 Sekunden"));
         inventory.setItem(16, item(org.bukkit.Material.EMERALD, "+ 60 Sekunden"));
+        inventory.setItem(20, item(org.bukkit.Material.ARROW, "Vorherige Regelseite"));
         inventory.setItem(22, item(org.bukkit.Material.PAPER, "Auf 5 Minuten setzen"));
-        inventory.setItem(18, item(org.bukkit.Material.ARROW, "Zurück"));
+        inventory.setItem(24, item(org.bukkit.Material.ARROW, "Nächste Regelseite"));
+        inventory.setItem(18, item(org.bukkit.Material.ARROW, "Zurück zu den Kategorien"));
+        inventory.setItem(4, item(org.bukkit.Material.WRITABLE_BOOK, "Typ-Regeln",
+                "/entity despawn add minecraft:diamond 60",
+                "/entity despawn add minecraft:zombie 120",
+                "Entfernen: /entity despawn remove minecraft:diamond",
+                "Aktive Regeln: " + rules.size()));
         inventory.setItem(26, item(MaterialChoice.CLOSE, "Schließen"));
         player.openInventory(inventory);
     }
@@ -249,6 +292,14 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
             return;
         }
 
+        if (holder.page == SettingsPage.HOME) {
+            switch (event.getRawSlot()) {
+                case 11 -> openAiSettings(player);
+                case 15 -> openDespawnSettings(player, 0);
+                case 26 -> player.closeInventory();
+            }
+            return;
+        }
         if (holder.page == SettingsPage.DESPAWN) {
             switch (event.getRawSlot()) {
                 case 10 -> setItemDespawnSeconds(itemDespawnSeconds - 60);
@@ -257,10 +308,12 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
                 case 16 -> setItemDespawnSeconds(itemDespawnSeconds + 60);
                 case 22 -> setItemDespawnSeconds(300);
                 case 18 -> { openSettings(player); return; }
+                case 20 -> { openDespawnSettings(player, holder.rulePage - 1); return; }
+                case 24 -> { openDespawnSettings(player, holder.rulePage + 1); return; }
                 case 26 -> { player.closeInventory(); return; }
                 default -> { return; }
             }
-            openDespawnSettings(player);
+            openDespawnSettings(player, holder.rulePage);
             return;
         }
         switch (event.getRawSlot()) {
@@ -269,7 +322,7 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
             case 15 -> adjustDistance(16);
             case 16 -> adjustDistance(64);
             case 22 -> setDistance(128);
-            case 4 -> { openDespawnSettings(player); return; }
+            case 18 -> { openSettings(player); return; }
             case 26 -> {
                 player.closeInventory();
                 return;
@@ -287,7 +340,7 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onItemSpawn(ItemSpawnEvent event) {
+    public void onEntitySpawn(EntitySpawnEvent event) {
         scheduleDespawn(event.getEntity());
     }
 
@@ -317,65 +370,135 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
     }
 
     private boolean handleDespawnCommand(CommandSender sender, String[] args) {
-        if (args.length < 2 || !args[0].equalsIgnoreCase("despawn")
-                || !args[1].equalsIgnoreCase("add") || args.length > 4) {
-            sender.sendMessage("Verwendung: /entity despawn add <Selektor> [Sekunden]");
-            sender.sendMessage("Beispiel: /entity despawn add @e[type=item,limit=1,sort=nearest] 60");
+        if (args.length < 3 || !args[0].equalsIgnoreCase("despawn") || args.length > 4) {
+            sender.sendMessage("Verwendung: /entity despawn add <minecraft:typ> [Sekunden]");
+            sender.sendMessage("          /entity despawn remove <minecraft:typ>");
             return true;
         }
-        if (args.length < 3) {
-            sender.sendMessage("Bitte gib einen Vanilla-Selektor an, z. B. @e[type=item,limit=1,sort=nearest].");
+        String action = args[1].toLowerCase(Locale.ROOT);
+        NamespacedKey key = NamespacedKey.fromString(args[2].toLowerCase(Locale.ROOT));
+        if (key == null || !key.getNamespace().equals("minecraft") || !isKnownRuleKey(key)) {
+            sender.sendMessage("Unbekannter Minecraft-Item- oder Entity-Typ: " + args[2]);
+            sender.sendMessage("Beispiele: minecraft:item, minecraft:diamond, minecraft:zombie");
+            return true;
+        }
+        String keyString = key.toString();
+        if (action.equals("remove")) {
+            if (args.length != 3) {
+                sender.sendMessage("Verwendung: /entity despawn remove <minecraft:typ>");
+                return true;
+            }
+            if (!getConfig().contains("despawn-rules." + keyString)) {
+                sender.sendMessage("Für " + keyString + " ist keine Despawn-Regel gesetzt.");
+                return true;
+            }
+            getConfig().set("despawn-rules." + keyString, null);
+            getConfig().set("despawn-rule-ids." + keyString, null);
+            saveConfig();
+            refreshRuleEntities(keyString, null);
+            sender.sendMessage("Despawn-Regel für " + keyString + " entfernt. Der normale Timer gilt wieder.");
+            return true;
+        }
+        if (!action.equals("add")) {
+            sender.sendMessage("Nur 'add' und 'remove' werden unterstützt.");
             return true;
         }
         int seconds = itemDespawnSeconds;
         if (args.length == 4) {
-            try {
-                seconds = Integer.parseInt(args[3]);
-            } catch (NumberFormatException exception) {
+            try { seconds = Integer.parseInt(args[3]); }
+            catch (NumberFormatException exception) {
                 sender.sendMessage("Die Zeit muss eine Zahl zwischen 15 und 300 Sekunden sein.");
                 return true;
             }
         }
         if (seconds < 15 || seconds > 300) {
-            sender.sendMessage("Die Zeit muss zwischen 15 Sekunden und 300 Sekunden liegen.");
+            sender.sendMessage("Die Zeit muss zwischen 15 und 300 Sekunden liegen.");
             return true;
         }
-        final List<Entity> selected;
-        try {
-            selected = Bukkit.selectEntities(sender, args[2]);
-        } catch (IllegalArgumentException exception) {
-            sender.sendMessage("Ungültiger Selektor: " + args[2]);
-            return true;
-        }
-        if (selected.isEmpty()) {
-            sender.sendMessage("Der Selektor hat keine Entities gefunden.");
-            return true;
-        }
-        int ticks = seconds * 20;
-        for (Entity entity : selected) {
-            entity.getPersistentDataContainer().set(manualDespawnKey, PersistentDataType.LONG,
-                    (long) entity.getTicksLived() + ticks);
-            scheduleDespawn(entity);
-        }
-        sender.sendMessage("Despawn-Timer für " + selected.size() + " Entity(s) auf "
-                + formatDuration(seconds) + " gesetzt.");
+        String id = UUID.randomUUID().toString();
+        getConfig().set("despawn-rules." + keyString, seconds);
+        getConfig().set("despawn-rule-ids." + keyString, id);
+        saveConfig();
+        refreshRuleEntities(keyString, id);
+        sender.sendMessage("Despawn-Regel für " + keyString + " auf " + formatDuration(seconds)
+                + " gesetzt. Sie gilt für passende geladene und neu erscheinende Entities.");
         return true;
+    }
+
+    private boolean isKnownRuleKey(NamespacedKey key) {
+        for (EntityType type : EntityType.values()) if (type.getKey().equals(key)) return true;
+        for (Material material : Material.values()) if (material.getKey().equals(key)) return true;
+        return false;
+    }
+
+    private void refreshRuleEntities(String key, String id) {
+        for (World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                if (id == null) {
+                    String savedKey = entity.getPersistentDataContainer().get(despawnRuleKey, PersistentDataType.STRING);
+                    if (key.equals(savedKey)) {
+                        clearRuleMarker(entity);
+                        scheduleDespawn(entity);
+                    }
+                } else if (key.equals(getMostSpecificRuleKey(entity))) {
+                    setRuleMarker(entity, key, id, entity.getTicksLived());
+                    scheduleDespawn(entity);
+                }
+            }
+        }
+    }
+
+    private void setRuleMarker(Entity entity, String key, String id, long baseAge) {
+        var data = entity.getPersistentDataContainer();
+        data.set(despawnRuleKey, PersistentDataType.STRING, key);
+        data.set(despawnRuleIdKey, PersistentDataType.STRING, id);
+        data.set(despawnRuleStartAgeKey, PersistentDataType.LONG, baseAge);
+    }
+
+    private void clearRuleMarker(Entity entity) {
+        var data = entity.getPersistentDataContainer();
+        data.remove(despawnRuleKey);
+        data.remove(despawnRuleIdKey);
+        data.remove(despawnRuleStartAgeKey);
+    }
+
+    private String getMostSpecificRuleKey(Entity entity) {
+        if (entity instanceof Item item) {
+            String materialKey = item.getItemStack().getType().getKey().toString();
+            if (getConfig().contains("despawn-rules." + materialKey)) return materialKey;
+        }
+        String typeKey = entity.getType().getKey().toString();
+        return getConfig().contains("despawn-rules." + typeKey) ? typeKey : null;
     }
 
     private void scheduleDespawn(Entity entity) {
         if (!entity.isValid()) return;
-        long remainingTicks = Long.MAX_VALUE;
-        if (entity instanceof Item) {
-            remainingTicks = (long) itemDespawnSeconds * 20L - entity.getTicksLived();
-        }
-        Long manualAt = entity.getPersistentDataContainer().get(manualDespawnKey, PersistentDataType.LONG);
-        if (manualAt != null) {
-            remainingTicks = Math.min(remainingTicks, manualAt - entity.getTicksLived());
-        }
-        if (remainingTicks == Long.MAX_VALUE) return;
-
         BukkitTask previous = despawnTasks.remove(entity.getUniqueId());
         if (previous != null) previous.cancel();
+        entity.getPersistentDataContainer().remove(legacyManualDespawnKey);
+
+        String ruleKey = getMostSpecificRuleKey(entity);
+        int seconds = ruleKey == null ? (entity instanceof Item ? itemDespawnSeconds : 0)
+                : getConfig().getInt("despawn-rules." + ruleKey, 0);
+        if (seconds <= 0) {
+            clearRuleMarker(entity);
+            return;
+        }
+
+        long baseAge = 0L;
+        if (ruleKey != null) {
+            String currentId = getConfig().getString("despawn-rule-ids." + ruleKey, "");
+            String savedKey = entity.getPersistentDataContainer().get(despawnRuleKey, PersistentDataType.STRING);
+            String savedId = entity.getPersistentDataContainer().get(despawnRuleIdKey, PersistentDataType.STRING);
+            Long savedBase = entity.getPersistentDataContainer().get(despawnRuleStartAgeKey, PersistentDataType.LONG);
+            if (!ruleKey.equals(savedKey) || !currentId.equals(savedId) || savedBase == null) {
+                baseAge = entity.getTicksLived();
+                setRuleMarker(entity, ruleKey, currentId, baseAge);
+            } else {
+                baseAge = savedBase;
+            }
+        }
+        long remainingTicks = baseAge + seconds * 20L - entity.getTicksLived();
         if (remainingTicks <= 0) {
             entity.remove();
             return;
@@ -445,6 +568,7 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
     private static final class SettingsHolder implements InventoryHolder {
         private Inventory inventory;
         private SettingsPage page;
+        private int rulePage;
 
         @Override
         public Inventory getInventory() {
@@ -452,7 +576,7 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
         }
     }
 
-    private enum SettingsPage { RANGE, DESPAWN }
+    private enum SettingsPage { HOME, RANGE, DESPAWN }
 
     private int countManagedEntities() {
         int count = 0;
