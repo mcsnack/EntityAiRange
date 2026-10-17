@@ -229,6 +229,8 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
             if (args[1].equalsIgnoreCase("add")) {
                 TreeSet<String> keys = new TreeSet<>();
                 for (EntityType type : EntityType.values()) {
+                    // Paper's UNKNOWN sentinel deliberately has no NamespacedKey.
+                    if (type == EntityType.UNKNOWN) continue;
                     NamespacedKey key = type.getKey();
                     if (key != null) keys.add(key.toString());
                 }
@@ -462,6 +464,8 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
 
     private boolean isKnownRuleKey(NamespacedKey key) {
         for (EntityType type : EntityType.values()) {
+            // EntityType.UNKNOWN.getKey() throws IllegalArgumentException on Paper.
+            if (type == EntityType.UNKNOWN) continue;
             if (key.equals(type.getKey())) return true;
         }
         for (Material material : Material.values()) {
