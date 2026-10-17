@@ -260,8 +260,8 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
         holder.page = SettingsPage.HOME;
         inventory.setItem(11, item(org.bukkit.Material.VILLAGER_SPAWN_EGG, "Mob AI",
                 "Einstellungen für die Mob-AI-Reichweite"));
-        inventory.setItem(15, item(org.bukkit.Material.CLOCK, "Item Despawn",
-                "Standardzeit und Regeln für Item- und Entity-Typen"));
+        inventory.setItem(15, item(org.bukkit.Material.PAPER, "Item-Despawn Regeln",
+                "Liste der aufgenommenen Item- und Entity-Typen"));
         inventory.setItem(26, item(MaterialChoice.CLOSE, "Schließen"));
         player.openInventory(inventory);
     }
@@ -289,41 +289,31 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
 
     private void openDespawnSettings(Player player, int page) {
         SettingsHolder holder = new SettingsHolder();
-        Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Item-Despawnzeit"));
+        Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Despawn-Regeln"));
         holder.inventory = inventory;
         holder.page = SettingsPage.DESPAWN;
         holder.rulePage = page;
         var section = getConfig().getConfigurationSection("despawn-rules");
         List<String> rules = new ArrayList<>(section == null ? List.of() : section.getKeys(false));
         rules.sort(String::compareTo);
-        int pageCount = Math.max(1, (rules.size() + 8) / 9);
+        int pageCount = Math.max(1, (rules.size() + 17) / 18);
         holder.rulePage = Math.max(0, Math.min(holder.rulePage, pageCount - 1));
-        int from = holder.rulePage * 9;
-        for (int i = from; i < Math.min(from + 9, rules.size()); i++) {
+        int from = holder.rulePage * 18;
+        for (int i = from; i < Math.min(from + 18, rules.size()); i++) {
             String key = rules.get(i);
             int seconds = getConfig().getInt("despawn-rules." + key, 0);
             inventory.setItem(i - from, item(org.bukkit.Material.PAPER, key,
-                    "Despawn nach " + formatDuration(seconds),
-                    "Entfernen: /entity despawn remove " + key));
+                    "Despawn nach " + formatDuration(seconds)));
         }
-        inventory.setItem(10, item(org.bukkit.Material.REDSTONE, "− 60 Sekunden"));
-        inventory.setItem(11, item(org.bukkit.Material.REDSTONE, "− 15 Sekunden"));
-        inventory.setItem(13, item(org.bukkit.Material.CLOCK,
-                "Item-Despawn: " + formatDuration(itemDespawnSeconds),
-                "Gilt für gedroppte Items.", "Bereich: 15 Sekunden bis 5 Minuten.",
-                "Standard für gedroppte Items ohne Material-Regel.",
-                "Änderungen werden sofort gespeichert."));
-        inventory.setItem(15, item(org.bukkit.Material.EMERALD, "+ 15 Sekunden"));
-        inventory.setItem(16, item(org.bukkit.Material.EMERALD, "+ 60 Sekunden"));
-        inventory.setItem(20, item(org.bukkit.Material.ARROW, "Vorherige Regelseite"));
-        inventory.setItem(22, item(org.bukkit.Material.PAPER, "Auf 5 Minuten setzen"));
-        inventory.setItem(24, item(org.bukkit.Material.ARROW, "Nächste Regelseite"));
+        if (rules.isEmpty()) {
+            inventory.setItem(13, item(org.bukkit.Material.PAPER, "Noch keine Regeln vorhanden",
+                    "Hinzufügen: /entity despawn add minecraft:diamond 60"));
+        }
+        if (pageCount > 1) {
+            inventory.setItem(20, item(org.bukkit.Material.ARROW, "Vorherige Regelseite"));
+            inventory.setItem(24, item(org.bukkit.Material.ARROW, "Nächste Regelseite"));
+        }
         inventory.setItem(18, item(org.bukkit.Material.ARROW, "Zurück zu den Kategorien"));
-        inventory.setItem(4, item(org.bukkit.Material.WRITABLE_BOOK, "Typ-Regeln",
-                "/entity despawn add minecraft:diamond 60",
-                "/entity despawn add minecraft:zombie 120",
-                "Entfernen: /entity despawn remove minecraft:diamond",
-                "Aktive Regeln: " + rules.size()));
         inventory.setItem(26, item(MaterialChoice.CLOSE, "Schließen"));
         player.openInventory(inventory);
     }
@@ -348,19 +338,12 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
         }
         if (holder.page == SettingsPage.DESPAWN) {
             switch (event.getRawSlot()) {
-                case 10 -> setItemDespawnSeconds(itemDespawnSeconds - 60);
-                case 11 -> setItemDespawnSeconds(itemDespawnSeconds - 15);
-                case 15 -> setItemDespawnSeconds(itemDespawnSeconds + 15);
-                case 16 -> setItemDespawnSeconds(itemDespawnSeconds + 60);
-                case 22 -> setItemDespawnSeconds(300);
                 case 18 -> { openSettings(player); return; }
                 case 20 -> { openDespawnSettings(player, holder.rulePage - 1); return; }
                 case 24 -> { openDespawnSettings(player, holder.rulePage + 1); return; }
                 case 26 -> { player.closeInventory(); return; }
                 default -> { return; }
             }
-            openDespawnSettings(player, holder.rulePage);
-            return;
         }
         switch (event.getRawSlot()) {
             case 10 -> adjustDistance(-64);
