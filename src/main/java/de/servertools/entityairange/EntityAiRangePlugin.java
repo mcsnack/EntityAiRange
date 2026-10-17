@@ -415,7 +415,11 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener {
     }
 
     private ItemStack item(MaterialChoice choice, String name, String... lore) {
-        ItemStack stack = new ItemStack(choice.material);
+        return item(choice.material, name, lore);
+    }
+
+    private ItemStack item(org.bukkit.Material material, String name, String... lore) {
+        ItemStack stack = new ItemStack(material);
         ItemMeta meta = stack.getItemMeta();
         meta.displayName(Component.text(name));
         if (lore.length > 0) {
