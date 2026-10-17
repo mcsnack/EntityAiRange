@@ -10,7 +10,7 @@ Paper-Plugin für Minecraft 26.3. EntityAiRange deaktiviert die KI geladener Mob
 
 ## Installation
 
-1. Lade **entity-ai-range-0.3.3.jar** aus dem [Release v0.3.3](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.3.3) herunter.
+1. Lade **entity-ai-range-0.3.4.jar** aus dem [Release v0.3.4](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.3.4) herunter.
 2. Lege die JAR in den Ordner `plugins` deines Paper-Servers.
 3. Starte den Server neu.
 4. Öffne das Menü mit `/entityairange gui`.
@@ -50,7 +50,7 @@ Beim Entfernen einer Regel gilt für Items wieder die spezifischere verbleibende
 
 Typ-Regeln fügst du über die Befehle oben hinzu und entfernst sie per `remove`. Das GUI dient hier nur als Übersicht; die globale Standardzeit wird in `config.yml` über `item-despawn-seconds` festgelegt. Sie wirkt auf gedroppte Items, sofern keine passendere Typ-Regel gesetzt ist.
 
-Despawn-Zeiten zählen in Minecraft-Ticks und pausieren, solange der Chunk nicht geladen ist. Die Timer für Typ-Regeln bleiben über Chunk-Entladen und Serverneustarts erhalten.
+Despawn-Zeiten laufen als echte Sekunden und laufen auch weiter, während der Chunk entladen oder der Server gestoppt ist. Ist die Zeit abgelaufen, wird das Entity beim nächsten Laden entfernt. Bei starker Serverlast kann das Entfernen selbst etwas später erfolgen, weil die Änderung auf dem Server-Thread ausgeführt werden muss.
 
 ## Konfiguration
 
@@ -81,4 +81,4 @@ Mit Maven und Java 25:
 mvn --batch-mode package
 ```
 
-Die JAR liegt unter `target/entity-ai-range-0.3.3.jar`.
+Die JAR liegt unter `target/entity-ai-range-0.3.4.jar`.
