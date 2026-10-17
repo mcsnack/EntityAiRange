@@ -23,7 +23,7 @@ Paper-Plugin für Minecraft 26.3. EntityAiRange deaktiviert die KI geladener Mob
 | `/entityairange status` | Zeigt die Zahl der aktuell verwalteten Mobs. |
 | `/entityairange restore` | Stellt verwaltete Mob-KI wieder her und pausiert die automatische Verwaltung. |
 | `/entityairange resume` | Setzt die automatische Mob-KI-Verwaltung fort. |
-| `/entity despawn add <minecraft:typ> [Sekunden]` | Fügt eine Regel für einen Item- oder Entity-Typ hinzu. Ohne Zeit gilt die im GUI eingestellte Item-Standardzeit. |
+| `/entity despawn add <minecraft:typ> [Sekunden]` | Fügt eine Regel für einen Item- oder Entity-Typ hinzu. Ohne Zeit gilt die globale Standardzeit aus `config.yml`. |
 | `/entity despawn remove <minecraft:typ>` | Entfernt die Regel für den angegebenen Typ. |
 
 Die Befehle unterstützen TAB-Vervollständigung: TAB zeigt Unterbefehle, passende Item- und Entity-IDs, vorhandene Regeln bei `remove` sowie Zeitwerte. Auch `/entityairange` vervollständigt `gui`, `status`, `restore` und `resume`.
@@ -37,7 +37,7 @@ Beispiele:
 /entity despawn remove minecraft:diamond
 ```
 
-Die Zeit muss **15 bis 300 Sekunden** betragen. `minecraft:item` gilt für alle gedroppten Items; ein Item-Material wie `minecraft:diamond` gilt nur für gedroppte Diamanten. Ein Entity-Typ wie `minecraft:zombie` gilt für alle passenden Entities, die bereits geladen sind oder später erscheinen. Für Items hat eine Material-Regel Vorrang vor `minecraft:item` und der globalen GUI-Standardzeit.
+Die Zeit muss **15 bis 300 Sekunden** betragen. `minecraft:item` gilt für alle gedroppten Items; ein Item-Material wie `minecraft:diamond` gilt nur für gedroppte Diamanten. Ein Entity-Typ wie `minecraft:zombie` gilt für alle passenden Entities, die bereits geladen sind oder später erscheinen. Für Items hat eine Material-Regel Vorrang vor `minecraft:item` und der globalen Standardzeit aus `config.yml`.
 
 Beim Entfernen einer Regel gilt für Items wieder die spezifischere verbleibende Regel oder die globale Standardzeit. Für Mob-Typen gilt danach wieder das normale Minecraft-Verhalten.
 
