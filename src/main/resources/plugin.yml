@@ -1,5 +1,5 @@
 name: EntityAiRange
-version: 0.3.4
+version: 0.3.3
 main: de.servertools.entityairange.EntityAiRangePlugin
 api-version: '26.3'
 description: Disables mob AI far from players and manages per-type despawn timers.
