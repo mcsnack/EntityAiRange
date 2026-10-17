@@ -1,6 +1,6 @@
 # EntityAiRange
 
-Paper-Plugin für Minecraft 26.3. EntityAiRange deaktiviert die KI geladener Mobs außerhalb einer einstellbaren Spielerreichweite und stellt sie wieder her, wenn Spieler zurückkehren. Zusätzlich lässt sich die Lebenszeit gedroppter Items verkürzen. Für einzelne Entities kann ein eigener Despawn-Timer gesetzt werden.
+Paper-Plugin für Minecraft 26.3. EntityAiRange deaktiviert die KI geladener Mobs außerhalb einer einstellbaren Spielerreichweite und stellt sie wieder her, wenn Spieler zurückkehren. Zusätzlich können Despawn-Zeiten für gedroppte Items und Minecraft-Entity-Typen verwaltet werden.
 
 ## Voraussetzungen
 
@@ -10,7 +10,7 @@ Paper-Plugin für Minecraft 26.3. EntityAiRange deaktiviert die KI geladener Mob
 
 ## Installation
 
-1. Lade **entity-ai-range-0.2.jar** aus dem [Release v0.2](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.2) herunter.
+1. Lade **entity-ai-range-0.3.jar** aus dem [Release v0.3](https://github.com/mcsnack/EntityAiRange/releases/tag/v0.3) herunter.
 2. Lege die JAR in den Ordner `plugins` deines Paper-Servers.
 3. Starte den Server neu.
 4. Öffne das Menü mit `/entityairange gui`.
@@ -19,27 +19,36 @@ Paper-Plugin für Minecraft 26.3. EntityAiRange deaktiviert die KI geladener Mob
 
 | Befehl | Funktion |
 | --- | --- |
-| `/entityairange gui` | Öffnet das Einstellungsmenü für Reichweite und Item-Despawnzeit. |
+| `/entityairange gui` | Öffnet die Kategorien **Mob AI** und **Item Despawn**. |
 | `/entityairange status` | Zeigt die Zahl der aktuell verwalteten Mobs. |
 | `/entityairange restore` | Stellt verwaltete Mob-KI wieder her und pausiert die automatische Verwaltung. |
 | `/entityairange resume` | Setzt die automatische Mob-KI-Verwaltung fort. |
-| `/entity despawn add <Selektor> [Sekunden]` | Setzt für die ausgewählten Entities einen einmaligen Timer. Ohne Sekundenwert wird die GUI-Einstellung verwendet. |
+| `/entity despawn add <minecraft:typ> [Sekunden]` | Fügt eine Regel für einen Item- oder Entity-Typ hinzu. Ohne Zeit gilt die im GUI eingestellte Item-Standardzeit. |
+| `/entity despawn remove <minecraft:typ>` | Entfernt die Regel für den angegebenen Typ. |
 
 Beispiele:
 
 ```text
-/entity despawn add @e[type=item,limit=1,sort=nearest] 60
-/entity despawn add @e[type=zombie,distance=..8] 30
-/entity despawn add @e[type=item,distance=..5]
+/entity despawn add minecraft:item 60
+/entity despawn add minecraft:diamond 30
+/entity despawn add minecraft:zombie 120
+/entity despawn remove minecraft:diamond
 ```
 
-Selektoren entsprechen den Vanilla-Selektoren. Der optionale Zeitwert ist auf **15 bis 300 Sekunden** begrenzt. Die Auswahl wird beim Befehl ausgewertet; der Timer wird nur für die Entities gesetzt, die der Selektor in diesem Moment findet. Ein Selektor mit `limit=1` zielt auf ein einzelnes Entity.
+Die Zeit muss **15 bis 300 Sekunden** betragen. `minecraft:item` gilt für alle gedroppten Items; ein Item-Material wie `minecraft:diamond` gilt nur für gedroppte Diamanten. Ein Entity-Typ wie `minecraft:zombie` gilt für alle passenden Entities, die bereits geladen sind oder später erscheinen. Für Items hat eine Material-Regel Vorrang vor `minecraft:item` und der globalen GUI-Standardzeit.
+
+Beim Entfernen einer Regel gilt für Items wieder die spezifischere verbleibende Regel oder die globale Standardzeit. Für Mob-Typen gilt danach wieder das normale Minecraft-Verhalten.
 
 ## GUI
 
-Im Reichweitenmenü wählst du **Item-Despawn einstellen**, um die zweite Seite zu öffnen. Dort passen die Tasten die Zeit in Schritten von 15 oder 60 Sekunden an. Die erlaubte Spanne ist 15 Sekunden bis 5 Minuten; Änderungen werden sofort gespeichert. Das gilt für alle gedroppten Items, auch für bereits geladene Items. Fünf Minuten entspricht dem normalen Vanilla-Despawnwert.
+`/entityairange gui` öffnet die Kategorien:
 
-Die Despawnzeit zählt in Minecraft-Ticks. Sie pausiert, solange der Chunk eines Entities nicht geladen ist. Beim Laden wird der Timer anhand des gespeicherten Entity-Alters fortgesetzt. Der Timer für per Befehl ausgewählte Entities bleibt ebenfalls über Chunk-Entladen und Serverneustarts erhalten.
+- **Mob AI**: Reichweite wie bisher anpassen.
+- **Item Despawn**: globale Lebenszeit aller gedroppten Items von 15 Sekunden bis 5 Minuten ändern und aktive Typ-Regeln einsehen.
+
+Typ-Regeln fügst du über die Befehle oben hinzu und entfernst sie per `remove`. Im Item-Despawn-Menü werden die aktiven Regeln samt Zeit angezeigt. Änderungen der globalen Item-Zeit wirken auf geladene und neu erscheinende Items, sofern keine passendere Typ-Regel gesetzt ist.
+
+Despawn-Zeiten zählen in Minecraft-Ticks und pausieren, solange der Chunk nicht geladen ist. Die Timer für Typ-Regeln bleiben über Chunk-Entladen und Serverneustarts erhalten.
 
 ## Konfiguration
 
@@ -50,15 +59,17 @@ disable-distance: 128
 scan-interval-ticks: 100
 log-scan-summary: false
 item-despawn-seconds: 300
+despawn-rules: {}
+despawn-rule-ids: {}
 ```
 
-`item-despawn-seconds` wird auf 15 bis 300 Sekunden begrenzt. Die GUI speichert diesen Wert sofort. Reichweite, Scan-Intervall und Log-Zusammenfassung funktionieren wie in den vorherigen Versionen.
+Typ-Regeln werden automatisch in der Konfiguration gespeichert. Die GUI speichert `item-despawn-seconds` sofort. Reichweite, Scan-Intervall und Log-Zusammenfassung funktionieren wie in den vorherigen Versionen.
 
 ## Hinweise
 
 - Nur Mobs, deren KI vorher aktiv war, werden verwaltet. Entities, die bereits mit deaktivierter KI geladen werden, bleiben unberührt. So übernimmt das Plugin keine von Stillagers veränderten Villager.
-- Deaktivierte Mob-KI bedeutet auch keine normale Bewegung, Wegfindung oder Zielsuche. Mob-Farmen, Raids, Haustiere und andere Mechaniken können sich anders verhalten.
-- Despawn-Timer entfernen die ausgewählten Entities endgültig. Wähle Selektoren daher sorgfältig.
+- Deaktivierte Mob-KI bedeutet auch keine normale Bewegung, Wegfindung oder Zielsuche. Mob-Farmen, Raids, Haustiere und andere Mechaniken können sich daher anders verhalten.
+- Despawn-Regeln entfernen passende Entities endgültig, sobald die eingestellte Zeit erreicht ist.
 
 ## Build
 
@@ -68,4 +79,4 @@ Mit Maven und Java 25:
 mvn --batch-mode package
 ```
 
-Die JAR liegt unter `target/entity-ai-range-0.2.jar`.
+Die JAR liegt unter `target/entity-ai-range-0.3.jar`.
