@@ -26,6 +26,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 import net.kyori.adventure.text.Component;
 
 import java.util.ArrayList;
@@ -35,21 +36,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.Locale;
 import java.util.TreeSet;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public final class EntityAiRangePlugin extends JavaPlugin implements Listener, TabCompleter {
     private NamespacedKey managedKey;
     private NamespacedKey despawnRuleKey;
     private NamespacedKey despawnRuleIdKey;
     private NamespacedKey despawnRuleStartAgeKey;
-    private NamespacedKey despawnDueAtKey;
     private NamespacedKey legacyManualDespawnKey;
-    private final Map<UUID, ScheduledFuture<?>> despawnTasks = new HashMap<>();
-    private final Map<UUID, UUID> despawnTaskTokens = new HashMap<>();
-    private ScheduledExecutorService despawnExecutor;
+    private final Map<UUID, BukkitTask> despawnTasks = new HashMap<>();
     private double disableDistanceSquared;
     private long scanIntervalTicks;
     private int disableDistance;
@@ -63,13 +57,7 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
         despawnRuleKey = new NamespacedKey(this, "despawn_rule_key");
         despawnRuleIdKey = new NamespacedKey(this, "despawn_rule_id");
         despawnRuleStartAgeKey = new NamespacedKey(this, "despawn_rule_start_age");
-        despawnDueAtKey = new NamespacedKey(this, "despawn_due_at_ms");
         legacyManualDespawnKey = new NamespacedKey(this, "manual_despawn_at_ticks");
-        despawnExecutor = Executors.newSingleThreadScheduledExecutor(task -> {
-            Thread thread = new Thread(task, "EntityAiRange-Despawn-Timer");
-            thread.setDaemon(true);
-            return thread;
-        });
         loadSettings();
         getServer().getPluginManager().registerEvents(this, this);
         if (getCommand("entity") != null) getCommand("entity").setTabCompleter(this);
@@ -93,10 +81,8 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
         // deliberately retained, so a later plugin start can restore them when nearby.
         int restored = restoreManagedEntities();
         getLogger().info("Restored AI for " + restored + " managed loaded entities.");
-        despawnTasks.values().forEach(task -> task.cancel(false));
+        despawnTasks.values().forEach(BukkitTask::cancel);
         despawnTasks.clear();
-        despawnTaskTokens.clear();
-        if (despawnExecutor != null) despawnExecutor.shutdownNow();
     }
 
     private void loadSettings() {
@@ -415,10 +401,8 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
     @EventHandler
     public void onChunkUnload(ChunkUnloadEvent event) {
         for (Entity entity : event.getChunk().getEntities()) {
-            UUID uuid = entity.getUniqueId();
-            ScheduledFuture<?> task = despawnTasks.remove(uuid);
-            despawnTaskTokens.remove(uuid);
-            if (task != null) task.cancel(false);
+            BukkitTask task = despawnTasks.remove(entity.getUniqueId());
+            if (task != null) task.cancel();
         }
     }
 
@@ -500,17 +484,18 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
                         scheduleDespawn(entity);
                     }
                 } else if (key.equals(getMostSpecificRuleKey(entity))) {
+                    setRuleMarker(entity, key, id, entity.getTicksLived());
                     scheduleDespawn(entity);
                 }
             }
         }
     }
 
-    private void setRuleMarker(Entity entity, String key, String id, long dueAtMillis) {
+    private void setRuleMarker(Entity entity, String key, String id, long baseAge) {
         var data = entity.getPersistentDataContainer();
         data.set(despawnRuleKey, PersistentDataType.STRING, key);
         data.set(despawnRuleIdKey, PersistentDataType.STRING, id);
-        data.set(despawnDueAtKey, PersistentDataType.LONG, dueAtMillis);
+        data.set(despawnRuleStartAgeKey, PersistentDataType.LONG, baseAge);
     }
 
     private void clearRuleMarker(Entity entity) {
@@ -518,7 +503,6 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
         data.remove(despawnRuleKey);
         data.remove(despawnRuleIdKey);
         data.remove(despawnRuleStartAgeKey);
-        data.remove(despawnDueAtKey);
     }
 
     private String getMostSpecificRuleKey(Entity entity) {
@@ -532,10 +516,8 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
 
     private void scheduleDespawn(Entity entity) {
         if (!entity.isValid()) return;
-        UUID uuid = entity.getUniqueId();
-        ScheduledFuture<?> previous = despawnTasks.remove(uuid);
-        despawnTaskTokens.remove(uuid);
-        if (previous != null) previous.cancel(false);
+        BukkitTask previous = despawnTasks.remove(entity.getUniqueId());
+        if (previous != null) previous.cancel();
         entity.getPersistentDataContainer().remove(legacyManualDespawnKey);
 
         String ruleKey = getMostSpecificRuleKey(entity);
@@ -546,42 +528,29 @@ public final class EntityAiRangePlugin extends JavaPlugin implements Listener, T
             return;
         }
 
-        String timerKey = ruleKey == null ? "default:item" : ruleKey;
-        String timerId = ruleKey == null ? Integer.toString(seconds)
-                : getConfig().getString("despawn-rule-ids." + ruleKey, "");
-        var data = entity.getPersistentDataContainer();
-        String savedKey = data.get(despawnRuleKey, PersistentDataType.STRING);
-        String savedId = data.get(despawnRuleIdKey, PersistentDataType.STRING);
-        Long dueAtMillis = data.get(despawnDueAtKey, PersistentDataType.LONG);
-        long now = System.currentTimeMillis();
-        if (!timerKey.equals(savedKey) || !timerId.equals(savedId) || dueAtMillis == null) {
-            dueAtMillis = now + seconds * 1000L;
-            setRuleMarker(entity, timerKey, timerId, dueAtMillis);
+        long baseAge = 0L;
+        if (ruleKey != null) {
+            String currentId = getConfig().getString("despawn-rule-ids." + ruleKey, "");
+            String savedKey = entity.getPersistentDataContainer().get(despawnRuleKey, PersistentDataType.STRING);
+            String savedId = entity.getPersistentDataContainer().get(despawnRuleIdKey, PersistentDataType.STRING);
+            Long savedBase = entity.getPersistentDataContainer().get(despawnRuleStartAgeKey, PersistentDataType.LONG);
+            if (!ruleKey.equals(savedKey) || !currentId.equals(savedId) || savedBase == null) {
+                baseAge = entity.getTicksLived();
+                setRuleMarker(entity, ruleKey, currentId, baseAge);
+            } else {
+                baseAge = savedBase;
+            }
         }
-        long remainingMillis = dueAtMillis - now;
-        if (remainingMillis <= 0) {
+        long remainingTicks = baseAge + seconds * 20L - entity.getTicksLived();
+        if (remainingTicks <= 0) {
             entity.remove();
             return;
         }
-        UUID token = UUID.randomUUID();
-        despawnTaskTokens.put(uuid, token);
-        ScheduledFuture<?> task = despawnExecutor.schedule(() -> {
-            try {
-                getServer().getScheduler().runTask(this, () -> {
-                    if (!token.equals(despawnTaskTokens.get(uuid))) return;
-                    despawnTaskTokens.remove(uuid);
-                    despawnTasks.remove(uuid);
-                    Long deadline = entity.getPersistentDataContainer()
-                            .get(despawnDueAtKey, PersistentDataType.LONG);
-                    if (entity.isValid() && deadline != null && deadline <= System.currentTimeMillis()) {
-                        entity.remove();
-                    }
-                });
-            } catch (RuntimeException ignored) {
-                // Plugin shutdown can race with a timer firing; onDisable cancels all tasks.
-            }
-        }, remainingMillis, TimeUnit.MILLISECONDS);
-        despawnTasks.put(uuid, task);
+        BukkitTask task = getServer().getScheduler().runTaskLater(this, () -> {
+            despawnTasks.remove(entity.getUniqueId());
+            if (entity.isValid()) entity.remove();
+        }, remainingTicks);
+        despawnTasks.put(entity.getUniqueId(), task);
     }
 
     private void adjustDistance(int amount) {
