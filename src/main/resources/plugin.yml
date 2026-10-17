@@ -1,10 +1,14 @@
 name: EntityAiRange
-version: 0.1
+version: 0.2
 main: de.servertools.entityairange.EntityAiRangePlugin
 api-version: '26.3'
-description: Disables mob AI far from players and restores it when they return.
+description: Disables mob AI far from players and manages entity despawn timers.
 author: ServerTools
 commands:
+  entity:
+    description: Sets a despawn timer for selected entities.
+    usage: /entity despawn add <selector> [seconds]
+    permission: entityairange.admin
   entityairange:
     description: Opens the settings GUI or manages entities tracked by EntityAiRange.
     usage: /entityairange [gui|status|restore|resume]
